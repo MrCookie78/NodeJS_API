@@ -7,3 +7,22 @@ mongoose
   .then(() => console.log("Connected to mongo"))
   .catch((err) => console.error("Failed to connect to mongo, ", err));
 
+
+const tacheSchema = new mongoose.Schema({
+	id: {
+		type: Number,
+		required: true,
+	},
+	description: {
+		type: String,
+		required: true,
+	},
+	faite: {
+		type: Boolean,
+		required: true,
+	}
+});
+
+const Tache = mongoose.model('Tache', tacheSchema);
+
+module.exports.Tache = Tache;
