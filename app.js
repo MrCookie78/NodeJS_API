@@ -100,6 +100,14 @@ app.put("/tache/:id", [verifyId], async (req, res) => {
   }
 });
 
+// Route pour supprimer une tache
+app.delete("/tache/:id", [verifyId], async (req, res) => {
+  const id = req.params.id;
+  const user = await Tache.findByIdAndDelete(id);
+
+  res.status(200).json(user);
+});
+
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
 	res.status(500).json({erreur: err.message})

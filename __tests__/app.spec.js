@@ -98,4 +98,18 @@ describe("NodeJS API", () => {
 			.expect(400)
 			.expect("Content-Type", /json/);
 	});
+
+	test("DELETE /tache/:id - Valid ID", () => {
+		return request(app)
+			.delete("/tache/" + tacheTest._id)
+			.expect(200)
+			.expect("Content-Type", /json/);
+	});
+
+	test("DELETE /tache/:id - Invalid ID", () => {
+		return request(app)
+			.delete("/tache/InvalidId")
+			.expect(404)
+			.expect("Content-Type", /json/);
+	});
 });
