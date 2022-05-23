@@ -129,8 +129,35 @@ app.post("/signup", async (req, res) => {
   user.motdepasse = passwordHashed;
 
   const newUser = await createUser(user);
-	console.log(newUser);
 	res.status(201).json({id: newUser._id, username: newUser.username, email: newUser.email });
+});
+
+// CONNEXION
+app.post("/signin", async (req, res) => {
+  const payload = req.body;
+  const schema = joi.object({
+    email: joi.string().max(255).required().email(),
+    motdepasse: joi.string().min(3).max(50).required(),
+  });
+
+  const { value: connexion, error } = schema.validate(payload);
+  if (error) return res.status(400).json({ error: error.details[0].message });
+
+  // On cherche dans la DB
+  const user = await User.findOne({ email: connexion.email });
+  if (!user) return res.status(400).json({ error: "Email Invalide" });
+
+  // On doit comparer les hash
+  const passwordHashed = await bcrypt.compare(
+    connexion.motdepasse,
+    user.motdepasse
+  );
+  if (!passwordHashed)
+    return res.status(400).json({ error: "Mot de passe invalide" });
+
+  // On retourne un JWT
+  const token = jwt.sign({ id: user._id }, process.env.JWT_PRIVATE_KEY);
+  res.header("x-auth-token", token).status(200).json({ username: user.username });
 });
 
 // Middleware de gestion des erreurs
