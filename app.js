@@ -35,4 +35,9 @@ app.get("/tache/:id", async (req, res) => {
 });
 
 
+app.use((err, req, res, next) => {
+	res.status(500).json({erreur: err.message})
+})
+
+
 module.exports = app;
