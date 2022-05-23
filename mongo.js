@@ -16,6 +16,10 @@ const tacheSchema = new mongoose.Schema({
 	faite: {
 		type: Boolean,
 		required: true,
+	},
+	crééePar: {
+		type: String,
+		required: true,
 	}
 });
 const Tache = mongoose.model('Tache', tacheSchema);

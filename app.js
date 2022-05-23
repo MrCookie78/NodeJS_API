@@ -25,7 +25,7 @@ const {createTache, createUser, Tache, User} = require("./mongo");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware de vérification d'id
+// Middleware de vérification d'id tache
 const verifyId = async (req, res, next) => {
   const params = req.params;
   let id = params.id;
@@ -79,7 +79,7 @@ app.post("/tache", [authGuard], async (req, res) => {
   // validation
   const schema = joi.object({
     description: joi.string().required(),
-		faite: joi.bool().required()
+		faite: joi.bool().required(),
   });
   const { value, error } = schema.validate(payload);
 
@@ -87,6 +87,7 @@ app.post("/tache", [authGuard], async (req, res) => {
   if (error) res.status(400).json({ erreur: error.details[0].message });
   else {
     // Ajout valeur dans base de données
+		value.crééePar = req.user.id;
     const tache = await createTache(value);
 
     // Renvoie objet créé
@@ -118,9 +119,13 @@ app.put("/tache/:id", [verifyId], async (req, res) => {
 // Route pour supprimer une tache
 app.delete("/tache/:id", [authGuard, verifyId], async (req, res) => {
   const id = req.params.id;
-  const user = await Tache.findByIdAndDelete(id);
-
-  res.status(200).json(user);
+  const tache = await Tache.findById(id);
+	if(tache.crééePar === req.user.id){
+		await Tache.findByIdAndDelete(id);
+		res.status(200).json(tache);
+	}
+	res.status(403).json({error: "Vous n'êtes pas le créateur de la tache"});
+	
 });
 
 // INSCRIPTION
