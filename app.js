@@ -25,10 +25,7 @@ const {createTache, Tache} = require("./mongo");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/taches", async (req, res) => {
-	res.status(200).json(await Tache.find({}));
-})
-
+// Middleware de vérification d'id
 const verifyId = async (req, res, next) => {
   const params = req.params;
   let id = params.id;
@@ -47,11 +44,19 @@ const verifyId = async (req, res, next) => {
   }
 };
 
+
+// Route retournant toutes les taches
+app.get("/taches", async (req, res) => {
+	res.status(200).json(await Tache.find({}));
+})
+
+// Route retournant une tache par ID
 app.get("/tache/:id", [verifyId], async (req, res) => {
   const tache = await Tache.findById(req.params.id);
   res.status(200).json(tache);
 });
 
+// Route permettant d'ajouter une tache
 app.post("/tache", async (req, res) => {
   const payload = req.body;
 
@@ -73,6 +78,29 @@ app.post("/tache", async (req, res) => {
   }
 });
 
+
+// Route permettant de modifier une tache
+app.put("/tache/:id", [verifyId], async (req, res) => {
+  const id = req.params.id;
+  const payload = req.body;
+
+  // validation
+  const schema = joi.object({
+    description: joi.string(),
+		faite: joi.bool(),
+  });
+  const { value, error } = schema.validate(payload);
+
+  if (error) res.status(400).json({ error: error.details[0].message });
+  else {
+    // Modification
+    await Tache.findByIdAndUpdate(id, value);
+		const tache = await Tache.findById(id);
+    res.status(200).json(tache);
+  }
+});
+
+// Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
 	res.status(500).json({erreur: err.message})
 })
