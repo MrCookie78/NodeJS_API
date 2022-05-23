@@ -1,6 +1,6 @@
 const request = require("supertest");
 const app = require("../app");
-const { Tache } = require("../mongo");
+const { deleteTache, Tache } = require("../mongo");
 
 describe("NodeJS API", () => {
 	test("GET /taches", async () => {
@@ -31,6 +31,32 @@ describe("NodeJS API", () => {
 		const res = await request(app)
 			.get("/tache/test")
 			.expect(404)
+			.expect("Content-Type", /json/);
+	});
+
+	test("POST /tache DATA OK", async () => {
+		const res = await request(app)
+			.post("/tache")
+			.send({
+				description: "test",
+				faite: true
+			})
+			.expect(201)
+			.expect("Content-Type", /json/);
+		const data = JSON.parse(res.text);
+		let tache = await Tache.findById(data._id);
+		tache = JSON.parse(JSON.stringify(tache));
+		expect(tache.description).toBe("test");
+		deleteTache(tache._id);
+	});
+
+	test("POST /tache DATA pas OK", async () => {
+		const res = await request(app)
+			.post("/tache")
+			.send({
+				description: "test"
+			})
+			.expect(400)
 			.expect("Content-Type", /json/);
 	});
 });
