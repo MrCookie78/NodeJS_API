@@ -44,6 +44,22 @@ const verifyId = async (req, res, next) => {
   }
 };
 
+// Middleware de vérification de connexion
+const authGuard = (req, res, next) => {
+  const token = req.header("x-auth-token");
+  if (!token) {
+    return res.status(401).json({ error: "Vous devez vous connecter" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_PRIVATE_KEY);
+    req.user = decoded;
+
+    next();
+  } catch (err) {
+    return res.status(400).json({ error: "Token invalide" });
+  }
+};
 
 // Route retournant toutes les taches
 app.get("/taches", async (req, res) => {
@@ -57,7 +73,7 @@ app.get("/tache/:id", [verifyId], async (req, res) => {
 });
 
 // Route permettant d'ajouter une tache
-app.post("/tache", async (req, res) => {
+app.post("/tache", [authGuard], async (req, res) => {
   const payload = req.body;
 
   // validation
@@ -100,7 +116,7 @@ app.put("/tache/:id", [verifyId], async (req, res) => {
 });
 
 // Route pour supprimer une tache
-app.delete("/tache/:id", [verifyId], async (req, res) => {
+app.delete("/tache/:id", [authGuard, verifyId], async (req, res) => {
   const id = req.params.id;
   const user = await Tache.findByIdAndDelete(id);
 
