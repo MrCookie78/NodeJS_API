@@ -1,8 +1,12 @@
 const request = require("supertest");
 const app = require("../app");
-const { deleteTache, Tache } = require("../mongo");
+const { createTache, Tache } = require("../mongo");
+
+let tacheTest = {};
 
 describe("NodeJS API", () => {
+
+	
 	test("GET /taches", async () => {
 		const res = await request(app)
 			.get("/taches")
@@ -34,7 +38,7 @@ describe("NodeJS API", () => {
 			.expect("Content-Type", /json/);
 	});
 
-	test("POST /tache DATA OK", async () => {
+	test("POST /tache DATA valid", async () => {
 		const res = await request(app)
 			.post("/tache")
 			.send({
@@ -47,14 +51,49 @@ describe("NodeJS API", () => {
 		let tache = await Tache.findById(data._id);
 		tache = JSON.parse(JSON.stringify(tache));
 		expect(tache.description).toBe("test");
-		deleteTache(tache._id);
+		tacheTest = tache;
+		// await Tache.findByIdAndDelete(tache._id);
 	});
 
-	test("POST /tache DATA pas OK", async () => {
+	test("POST /tache DATA invalid", async () => {
 		const res = await request(app)
 			.post("/tache")
 			.send({
 				description: "test"
+			})
+			.expect(400)
+			.expect("Content-Type", /json/);
+	});
+
+	test("PUT /tache/:id - [OK]", () => {
+		return request(app)
+			.put("/tache/" + tacheTest._id)
+			.send({
+				description: "test modifié",
+			})
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.then((response) => {
+				const data = JSON.parse(response.text);
+				expect(data.description).toBe("test modifié");
+			});
+	});
+
+	test("PUT /tache/:id - Invalid ID", () => {
+		return request(app)
+			.put("/tache/incorrectTest")
+			.send({
+				description: "test modifié",
+			})
+			.expect(404)
+			.expect("Content-Type", /json/);
+	});
+
+	test("PUT /tache/:id - Invalid DATA", () => {
+		return request(app)
+			.put("/tache/" + tacheTest._id)
+			.send({
+				desc: "test modifié",
 			})
 			.expect(400)
 			.expect("Content-Type", /json/);
