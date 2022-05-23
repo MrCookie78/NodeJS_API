@@ -1,12 +1,12 @@
 const request = require("supertest");
 const app = require("../app");
-const { createTache, Tache } = require("../mongo");
+const {createTache, createUser, Tache, User} = require("../mongo");
 
 let tacheTest = {};
+let userTest = {};
 
 describe("NodeJS API", () => {
 
-	
 	test("GET /taches", async () => {
 		const res = await request(app)
 			.get("/taches")
@@ -112,4 +112,46 @@ describe("NodeJS API", () => {
 			.expect(404)
 			.expect("Content-Type", /json/);
 	});
+
+	test("POST /signin DATA valid", async () => {
+		const res = await request(app)
+			.post("/signup")
+			.send({
+				email: "test@test.fr",
+				username: "test",
+				motdepasse: "test"
+			})
+			.expect(201)
+			.expect("Content-Type", /json/);
+		const data = JSON.parse(res.text);
+		expect(data.email).toBe("test@test.fr");
+
+		const user = User.findOne({email: data.email, username: data.username});
+		userTest = user;
+	});
+
+	test("POST /signin email already exist", async () => {
+		const res = await request(app)
+			.post("/signup")
+			.send({
+				email: "test@test.fr",
+				username: "test2",
+				motdepasse: "test2"
+			})
+			.expect(400)
+			.expect("Content-Type", /html/);
+		
+	});
+
+	test("POST /signup DATA invalid", async () => {
+		const res = await request(app)
+			.post("/signup")
+			.send({
+				email: "test@test.fr",
+				username: "test"
+			})
+			.expect(400)
+			.expect("Content-Type", /json/);
+	});
+
 });
