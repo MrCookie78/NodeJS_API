@@ -25,7 +25,14 @@ const {Tache} = require("./mongo");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.get("/taches", async (req, res) => {
+	res.status(200).json(await Tache.find({}));
+})
 
+app.get("/tache/:id", async (req, res) => {
+  const tache = await Tache.findById(req.params.id);
+  res.status(200).json(tache);
+});
 
 
 module.exports = app;
