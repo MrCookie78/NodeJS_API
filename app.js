@@ -19,7 +19,7 @@ if (!process.env.JWT_PRIVATE_KEY) {
 }
 
 // Base de données
-const {Tache} = require("./mongo");
+const {createTache, Tache} = require("./mongo");
 
 // On va avoir besoin de parser le json entrant dans req.body
 app.use(express.json());
@@ -50,6 +50,27 @@ const verifyId = async (req, res, next) => {
 app.get("/tache/:id", [verifyId], async (req, res) => {
   const tache = await Tache.findById(req.params.id);
   res.status(200).json(tache);
+});
+
+app.post("/tache", async (req, res) => {
+  const payload = req.body;
+
+  // validation
+  const schema = joi.object({
+    description: joi.string().required(),
+		faite: joi.bool().required()
+  });
+  const { value, error } = schema.validate(payload);
+
+  // Erreur => Renvoie erreur
+  if (error) res.status(400).json({ erreur: error.details[0].message });
+  else {
+    // Ajout valeur dans base de données
+    const tache = await createTache(value);
+
+    // Renvoie objet créé
+    res.status(201).json(tache);
+  }
 });
 
 app.use((err, req, res, next) => {

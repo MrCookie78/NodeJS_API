@@ -19,6 +19,11 @@ const tacheSchema = new mongoose.Schema({
 	}
 });
 
+module.exports.createTache = async (obj) => {
+  const tache = new Tache(obj);
+  return tache.save();
+};
+
 const Tache = mongoose.model('Tache', tacheSchema);
 
 module.exports.Tache = Tache;
