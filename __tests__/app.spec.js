@@ -52,7 +52,6 @@ describe("NodeJS API", () => {
 		tache = JSON.parse(JSON.stringify(tache));
 		expect(tache.description).toBe("test");
 		tacheTest = tache;
-		// await Tache.findByIdAndDelete(tache._id);
 	});
 
 	test("POST /tache DATA invalid", async () => {
@@ -113,7 +112,7 @@ describe("NodeJS API", () => {
 			.expect("Content-Type", /json/);
 	});
 
-	test("POST /signin DATA valid", async () => {
+	test("POST /signin Valid DATA", async () => {
 		const res = await request(app)
 			.post("/signup")
 			.send({
@@ -126,7 +125,7 @@ describe("NodeJS API", () => {
 		const data = JSON.parse(res.text);
 		expect(data.email).toBe("test@test.fr");
 
-		const user = User.findOne({email: data.email, username: data.username});
+		let user = await User.findOne({email: data.email, username: data.username});
 		userTest = user;
 	});
 
@@ -140,10 +139,9 @@ describe("NodeJS API", () => {
 			})
 			.expect(400)
 			.expect("Content-Type", /html/);
-		
 	});
 
-	test("POST /signup DATA invalid", async () => {
+	test("POST /signup Invalid DATA", async () => {
 		const res = await request(app)
 			.post("/signup")
 			.send({
@@ -152,6 +150,37 @@ describe("NodeJS API", () => {
 			})
 			.expect(400)
 			.expect("Content-Type", /json/);
+	});
+
+	test.each([	
+							{ email: "fauxmail@test.fr", motdepasse: "test" }, 
+							{ email: "test@test.fr", motdepasse: "fauxMotDePasse" },
+							{ email: "test@test.fr" },
+							{ motdepasse: "fauxMotDePasse" },
+							{}
+						])(
+    "POST /signin Should refuse %p. Invalid DATA",
+    async (invalidObject) => {
+      const result = await request(app)
+        .post("/signin")
+        .send(invalidObject)
+        .expect(400);
+    }
+  );
+
+	test("POST /signin Valid DATA", async () => {
+		const res = await request(app)
+			.post("/signin")
+			.send({
+				email: "test@test.fr",
+				motdepasse: "test"
+			})
+			.expect(200)
+			.expect("Content-Type", /json/);
+		const data = JSON.parse(res.text);
+		expect(res.header['x-auth-token']);
+		expect(data.username).toBe("test");
+		await User.findByIdAndDelete(userTest._id);
 	});
 
 });
