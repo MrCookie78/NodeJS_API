@@ -29,11 +29,28 @@ app.get("/taches", async (req, res) => {
 	res.status(200).json(await Tache.find({}));
 })
 
-app.get("/tache/:id", async (req, res) => {
+const verifyId = async (req, res, next) => {
+  const params = req.params;
+  let id = params.id;
+
+  // Vérification
+  if (ObjectID.isValid(id)) {
+    const user = await Tache.findById(id);
+
+    if (user) next();
+    else res.status(404).json({ error: "L'id n'existe pas." });
+  }
+
+  // Sinon
+  else {
+    res.status(404).json({ error: "L'id n'existe pas." });
+  }
+};
+
+app.get("/tache/:id", [verifyId], async (req, res) => {
   const tache = await Tache.findById(req.params.id);
   res.status(200).json(tache);
 });
-
 
 app.use((err, req, res, next) => {
 	res.status(500).json({erreur: err.message})

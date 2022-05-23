@@ -30,7 +30,7 @@ describe("NodeJS API", () => {
 	test("GET /taches/:id avec id non existant", async () => {
 		const res = await request(app)
 			.get("/tache/test")
-			.expect(500)
+			.expect(404)
 			.expect("Content-Type", /json/);
 	});
 });
