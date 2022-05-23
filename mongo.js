@@ -18,12 +18,33 @@ const tacheSchema = new mongoose.Schema({
 		required: true,
 	}
 });
+const Tache = mongoose.model('Tache', tacheSchema);
+
+const tacheUser = new mongoose.Schema({
+	email: {
+		type: String,
+		required: true,
+	},
+	username: {
+		type: String,
+		required: true,
+	},
+	motdepasse: {
+		type: String,
+		required: true,
+	}
+});
+const User = mongoose.model('User', tacheUser);
 
 module.exports.createTache = async (obj) => {
   const tache = new Tache(obj);
   return tache.save();
 };
 
-const Tache = mongoose.model('Tache', tacheSchema);
+module.exports.createUser = async (obj) => {
+  const user = new User(obj);
+  return user.save();
+};
 
 module.exports.Tache = Tache;
+module.exports.User = User;

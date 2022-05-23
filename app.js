@@ -19,7 +19,7 @@ if (!process.env.JWT_PRIVATE_KEY) {
 }
 
 // Base de données
-const {createTache, Tache} = require("./mongo");
+const {createTache, createUser, Tache, User} = require("./mongo");
 
 // On va avoir besoin de parser le json entrant dans req.body
 app.use(express.json());
@@ -78,7 +78,6 @@ app.post("/tache", async (req, res) => {
   }
 });
 
-
 // Route permettant de modifier une tache
 app.put("/tache/:id", [verifyId], async (req, res) => {
   const id = req.params.id;
@@ -108,10 +107,62 @@ app.delete("/tache/:id", [verifyId], async (req, res) => {
   res.status(200).json(user);
 });
 
+// INSCRIPTION
+app.post("/signup", async (req, res) => {
+  const payload = req.body;
+  const schema = joi.object({
+    email: joi.string().max(255).required().email(),
+    username: joi.string().min(3).max(50).required(),
+    motdepasse: joi.string().min(3).max(50).required(),
+  });
+
+  const { value: user, error } = schema.validate(payload);
+  if (error) return res.status(400).json({ error: error.details[0].message });
+
+  // Avant d'inscrire on vérifie que le compte est unique
+  const found = await User.findOne({ email: user.email });
+  if (found) return res.status(400).send("Please signin instead of signup");
+
+  // Hachage du mot de passe
+  const salt = await bcrypt.genSalt(10);
+  const passwordHashed = await bcrypt.hash(user.motdepasse, salt);
+  user.motdepasse = passwordHashed;
+
+  const newUser = await createUser(user);
+	res.status(201).json({id: newUser._id, username: newUser.username, email: newUser.email });
+});
+
+// CONNEXION
+app.post("/signin", async (req, res) => {
+  const payload = req.body;
+  const schema = joi.object({
+    email: joi.string().max(255).required().email(),
+    motdepasse: joi.string().min(3).max(50).required(),
+  });
+
+  const { value: connexion, error } = schema.validate(payload);
+  if (error) return res.status(400).json({ error: error.details[0].message });
+
+  // On cherche dans la DB
+  const user = await User.findOne({ email: connexion.email });
+  if (!user) return res.status(400).json({ error: "Email Invalide" });
+
+  // On doit comparer les hash
+  const passwordHashed = await bcrypt.compare(
+    connexion.motdepasse,
+    user.motdepasse
+  );
+  if (!passwordHashed)
+    return res.status(400).json({ error: "Mot de passe invalide" });
+
+  // On retourne un JWT
+  const token = jwt.sign({ id: user._id }, process.env.JWT_PRIVATE_KEY);
+  res.header("x-auth-token", token).status(200).json({ username: user.username });
+});
+
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
 	res.status(500).json({erreur: err.message})
 })
-
 
 module.exports = app;
