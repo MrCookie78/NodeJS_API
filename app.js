@@ -18,6 +18,13 @@ if (!process.env.JWT_PRIVATE_KEY) {
   process.exit(1);
 }
 
+// Cors
+const cors = require('cors');
+const corsOptions = {
+  exposedHeaders: 'x-auth-token',
+};
+app.use(cors(corsOptions));
+
 // Base de données
 const {createTache, createUser, Tache, User} = require("./mongo");
 
@@ -25,7 +32,7 @@ const {createTache, createUser, Tache, User} = require("./mongo");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware de vérification d'id
+// Middleware de vérification d'id tache
 const verifyId = async (req, res, next) => {
   const params = req.params;
   let id = params.id;
@@ -44,6 +51,24 @@ const verifyId = async (req, res, next) => {
   }
 };
 
+// Middleware de vérification de connexion
+const authGuard = (req, res, next) => {
+  const token = req.header("x-auth-token");
+  if (!token) {
+    return res.status(401).json({ error: "Vous devez vous connecter" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_PRIVATE_KEY);
+    req.user = decoded;
+
+    next();
+  } catch (err) {
+    return res.status(400).json({ error: "Token invalide" });
+  }
+};
+
+
 
 // Route retournant toutes les taches
 app.get("/taches", async (req, res) => {
@@ -57,13 +82,13 @@ app.get("/tache/:id", [verifyId], async (req, res) => {
 });
 
 // Route permettant d'ajouter une tache
-app.post("/tache", async (req, res) => {
+app.post("/tache", [authGuard], async (req, res) => {
   const payload = req.body;
 
   // validation
   const schema = joi.object({
     description: joi.string().required(),
-		faite: joi.bool().required()
+		faite: joi.bool().required(),
   });
   const { value, error } = schema.validate(payload);
 
@@ -71,6 +96,7 @@ app.post("/tache", async (req, res) => {
   if (error) res.status(400).json({ erreur: error.details[0].message });
   else {
     // Ajout valeur dans base de données
+		value.crééePar = req.user.id;
     const tache = await createTache(value);
 
     // Renvoie objet créé
@@ -100,11 +126,15 @@ app.put("/tache/:id", [verifyId], async (req, res) => {
 });
 
 // Route pour supprimer une tache
-app.delete("/tache/:id", [verifyId], async (req, res) => {
+app.delete("/tache/:id", [authGuard, verifyId], async (req, res) => {
   const id = req.params.id;
-  const user = await Tache.findByIdAndDelete(id);
-
-  res.status(200).json(user);
+  const tache = await Tache.findById(id);
+	if(tache.crééePar === req.user.id){
+		await Tache.findByIdAndDelete(id);
+		res.status(200).json(tache);
+	}
+	res.status(403).json({error: "Vous n'êtes pas le créateur de la tache"});
+	
 });
 
 // INSCRIPTION
@@ -121,7 +151,7 @@ app.post("/signup", async (req, res) => {
 
   // Avant d'inscrire on vérifie que le compte est unique
   const found = await User.findOne({ email: user.email });
-  if (found) return res.status(400).send("Please signin instead of signup");
+  if (found) return res.status(400).send("Please login instead of signup");
 
   // Hachage du mot de passe
   const salt = await bcrypt.genSalt(10);
@@ -133,7 +163,7 @@ app.post("/signup", async (req, res) => {
 });
 
 // CONNEXION
-app.post("/signin", async (req, res) => {
+app.post("/login", async (req, res) => {
   const payload = req.body;
   const schema = joi.object({
     email: joi.string().max(255).required().email(),
@@ -160,9 +190,15 @@ app.post("/signin", async (req, res) => {
   res.header("x-auth-token", token).status(200).json({ username: user.username });
 });
 
+// Route compte utilisateur
+app.get("/me", [authGuard], async (req, res) => {
+  const find = await User.findById(req.user.id);
+  res.status(200).json(find);
+});
+
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
 	res.status(500).json({erreur: err.message})
-})
+});
 
 module.exports = app;
