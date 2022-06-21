@@ -18,6 +18,13 @@ if (!process.env.JWT_PRIVATE_KEY) {
   process.exit(1);
 }
 
+// Cors
+const cors = require('cors');
+const corsOptions = {
+  exposedHeaders: 'x-auth-token',
+};
+app.use(cors(corsOptions));
+
 // Base de données
 const {createTache, createUser, Tache, User} = require("./mongo");
 
@@ -60,6 +67,8 @@ const authGuard = (req, res, next) => {
     return res.status(400).json({ error: "Token invalide" });
   }
 };
+
+
 
 // Route retournant toutes les taches
 app.get("/taches", async (req, res) => {
@@ -142,7 +151,7 @@ app.post("/signup", async (req, res) => {
 
   // Avant d'inscrire on vérifie que le compte est unique
   const found = await User.findOne({ email: user.email });
-  if (found) return res.status(400).send("Please signin instead of signup");
+  if (found) return res.status(400).send("Please login instead of signup");
 
   // Hachage du mot de passe
   const salt = await bcrypt.genSalt(10);
@@ -154,7 +163,7 @@ app.post("/signup", async (req, res) => {
 });
 
 // CONNEXION
-app.post("/signin", async (req, res) => {
+app.post("/login", async (req, res) => {
   const payload = req.body;
   const schema = joi.object({
     email: joi.string().max(255).required().email(),
@@ -181,9 +190,15 @@ app.post("/signin", async (req, res) => {
   res.header("x-auth-token", token).status(200).json({ username: user.username });
 });
 
+// Route compte utilisateur
+app.get("/me", [authGuard], async (req, res) => {
+  const find = await User.findById(req.user.id);
+  res.status(200).json(find);
+});
+
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
 	res.status(500).json({erreur: err.message})
-})
+});
 
 module.exports = app;
